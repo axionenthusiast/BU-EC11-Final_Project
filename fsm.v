@@ -19,30 +19,56 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-
 module fsm(
-        input clock,
-        input [15:0] sixteen_bit_number,
-        output [6:0] cathode,
-        output reg [7:0] anode
-    );
-    
+    input clock,
+    input [15:0] sixteen_bit_number,
+    output [6:0] cathode,
+    output reg [7:0] anode
+);
+
     reg [3:0] four_bit_number;
-    // instantiate decoder that decodes the four bit number into the cathode
-    reg [1:0] state; // stores state of FSM
-    
+    reg [1:0] state; // 3 states: 0,1,2
+
+    // decoder instance
+    decoder dec (
+        .number(four_bit_number),
+        .cathode(cathode)
+    );
+
     initial begin
-		state = 0;
-		anode = 8'b11111111;
-	end
-    
+        state = 0;
+        anode = 8'b11111111;
+    end
+
     always @(posedge clock)
-	begin
-		// increment state
-		// set anode (which display do you want to set?)
-		//   hint: if state == 0, then set only the LSB of anode to zero,
-		//         if state == 1, then set only the second to LSB to zero.
-		// set the four bit number to be the approprate slice of the 16-bit number
-	end
-    
+    begin
+        // state transition (3-state FSM)
+        if (state == 2)
+            state <= 0;
+        else
+            state <= state + 1;
+
+        case (state)
+            2'b00: begin
+                anode <= 8'b11111110; // enable display 0
+                four_bit_number <= sixteen_bit_number[3:0];
+            end
+
+            2'b01: begin
+                anode <= 8'b11111101; // enable display 1
+                four_bit_number <= sixteen_bit_number[7:4];
+            end
+
+            2'b10: begin
+                anode <= 8'b11111011; // enable display 2
+                four_bit_number <= sixteen_bit_number[11:8];
+            end
+
+            default: begin
+                anode <= 8'b11111111;
+                four_bit_number <= 4'b0000;
+            end
+        endcase
+    end
+
 endmodule
