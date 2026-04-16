@@ -33,12 +33,16 @@ module top(
     
     
     reg [15:0] seed = 56394;
-    reg load = 1;
+    reg load;
     reg next_load;
+    
+    initial begin
+        load = 1;
+    end
     
     faster_clock_divider cd(.in_clk(in_clk), .out_clk(clk));
     PRNG rng(.clk(clk), .rst(rst), .load(load), .seed(seed), .out(rng_out));
-    
+    counter countup(.clk(in_clk));
     
     
     always @(posedge clk or posedge clk) begin
@@ -46,9 +50,10 @@ module top(
             load <= 1'b1;
             next_load <= 1'b0;
         end
-        else if (!next_load) begin
-            
-            
+        else if (next_load == 0) begin
+            load <= 1'b0;
+            next_load <= 1'b1;
+        end 
         
         
     end
