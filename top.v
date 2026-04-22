@@ -21,10 +21,10 @@
 
 
 module top(
-    input in_clk,
+    input clock,
     input rst,
     input [15:0] switch
-    
+
     );
     
     wire clk;
@@ -36,12 +36,36 @@ module top(
     reg load;
     reg next_load;
     
+    wire game_over;
+    wire [6:0] timer_cathode;
+    wire [7:0] timer_anode;
+    wire [6:0] score_cathode;
+    wire [7:0] score_anode;
+    
+    wire hit;
+    
     initial begin
         load = 1;
     end
     
-    faster_clock_divider cd(.in_clk(in_clk), .out_clk(clk));
-    PRNG rng(.clk(clk), .rst(rst), .load(load), .seed(seed), .out(rng_out));
+    game_timer gt (
+        .clock(clock),
+        .rst(rst),
+        .cathode(timer_cathode),
+        .anode(timer_anode),
+        .game_over(game_over)
+        );
+        
+    score_counter sc (
+        .clock(clock),
+        .rst(rst),
+        .increment(increment),
+        .cathode(score_cathode),
+        .anode(score_anode)
+        );
+    
+    PRNG rng(.clk(clock), .rst(rst), .load(load), .seed(seed), .out(rng_out));
+    
     counter countup(.clk(in_clk));
     
     
@@ -53,7 +77,7 @@ module top(
         else if (next_load == 0) begin
             load <= 1'b0;
             next_load <= 1'b1;
-        end 
+        end
         
         
     end
