@@ -31,8 +31,7 @@ module vga(
     output reg VGA_VS
 );
 
-    wire clock;
-    vga_clock_divider CD(.clk_in(in_clk), .divided_clk(clock));
+    wire clock = in_clk;
 
     reg [31:0] count, vertical_count;
     reg [31:0] vertical_position, horizontal_position;

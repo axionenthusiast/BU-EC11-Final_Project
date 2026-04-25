@@ -27,8 +27,8 @@ module spawner(
     );
     
     localparam [27:0] MIN_PERIOD = 28'd99_999_999;
-    reg [27:0] tick_counter;
-    reg [27:0] current_period;
+    reg [27:0] tick_counter = 0;
+    reg [27:0] current_period = 0;
     
     always @(posedge clock or posedge rst) begin
         if (rst) begin
