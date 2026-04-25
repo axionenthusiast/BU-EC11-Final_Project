@@ -24,33 +24,21 @@ module score_counter(
     input clock,
     input rst,
     input increment,
-    output [6:0] cathode,
-    output [7:0] anode
+    input game_over,
+    output [11:0] bcd
     );
-    wire fsm_clock;
+
     reg [7:0] score = 0;
-    wire [11:0] bcd;
   
-    faster_clock_divider fcd (
-        .in_clk  (clock),
-        .out_clk (fsm_clock)
+    binary_to_BCD_converter convert(
+        .bin(score),
+        .bcd(bcd)
     );
-    
-    
-    binary_to_BCD_converter convert(.bin(score), .bcd(bcd));
-    
-    fsm display_fsm (
-        .clock(fsm_clock),
-        .sixteen_bit_number({4'd0, bcd}),
-        .cathode(cathode),
-        .anode(anode)
-    );
-    
-    
+      
     always @(posedge clock or posedge rst) begin
         if (rst)
             score <= 8'd0;
-        else if (increment && score < 8'd99)
+        else if (increment && !game_over && score < 8'd99)
             score <= score + 8'd1;
     end
     
