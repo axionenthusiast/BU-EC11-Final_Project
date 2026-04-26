@@ -22,40 +22,57 @@
 
 module top(
     input clock,
-    input rst,
+    input cpu_resetn,
     input [15:0] switch,
     
     output [15:0] led,
     output LED16_R,
     output [6:0] cathode,
-    output [7:0] anode
+    output [7:0] anode,
+    output [3:0] VGA_R, VGA_G, VGA_B,
+    output VGA_HS, VGA_VS
     );
     
+    wire rst = ~cpu_resetn;
     wire [15:0] rng_out;    
     reg [15:0] seed = 16'd56394;
-    reg load;
+    reg load = 1'b1;
+    reg [27:0] startup_counter = 0;
+    reg ready = 1'b0;
+    
+    always @(posedge clock) begin
+        load <= 1'b0;
+        if (!ready) begin
+            if (startup_counter == 28'd299_999_999)
+                ready <= 1'b1;
+            else
+                startup_counter <= startup_counter + 1;
+        end 
+    end 
    
-    initial begin
-        load = 1'b1;
-    end
     
     PRNG rng(.clk(clock), .rst(rst), .load(load), .seed(seed), .out(rng_out));    
     
     wire game_over;
+    wire game_rst = rst | ~ready;
     wire [11:0] timer_bcd, score_bcd;
-    game_timer gt(.clock(clock), .rst(rst), .game_over(game_over), .bcd(timer_bcd));
+    game_timer gt(.clock(clock), .rst(game_rst), .game_over(game_over), .bcd(timer_bcd));
     
     wire increment;
-    score_counter sc(.clock(clock), .rst(rst), .increment(increment), .game_over(game_over), .bcd(timer_bcd));
+    score_counter sc(.clock(clock), .rst(rst), .increment(increment), .game_over(game_over), .bcd(score_bcd));
     
     wire [15:0] spawn_bus;
-    spawner sp(.clock(clock), .rst(rst), .rng(rng_out), .game_over(game_over), .spawn(spawn_bus));
+    spawner sp(.clock(clock), .rst(game_rst), .rng(rng_out), .game_over(game_over), .spawn(spawn_bus));
     
     wire [15:0] hits;
+    //wire multiple_switches = (switch & (switch-16'b1)) != 16'b0;
+    assign increment = |hits;
+    
     genvar i;
     generate
         for (i = 0; i < 16; i = i + 1) begin : moles
-            mole m(.clock(clock), .rst(rst), .spawn(spawn_bus[i]), .switch_raw(switch[i]), .game_over(game_over), .led(led[i]), .hit(hits[i]));
+            mole m(.clock(clock), .rst(rst), .spawn(spawn_bus[i]), .switch_raw(switch[i]), .game_over(game_over),
+            .others_active(1'b0), .led(led[i]), .hit(hits[i]));
         end
     endgenerate
     
@@ -67,5 +84,23 @@ module top(
     
     display_driver dd(.clock(clock), .rst(rst), .digits(digits), .blank(blank), .cathode(cathode), .anode(anode));
     assign LED16_R = game_over;
+    
+    wire vga_clk;
+    vga_clock_divider vga_cd (
+        .in_clk (clock),
+        .rst (rst),
+        .divided_clk (vga_clk)
+    );
+    
+    vga vg (
+        .in_clk (vga_clk),
+        .moles (led),
+        .game_over (game_over),
+        .VGA_R (VGA_R),
+        .VGA_G (VGA_G),
+        .VGA_B (VGA_B),
+        .VGA_HS (VGA_HS),
+        .VGA_VS(VGA_VS)
+        );
     
 endmodule

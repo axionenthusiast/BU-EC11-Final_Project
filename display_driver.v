@@ -24,7 +24,7 @@ module display_driver(
     input clock, rst,
     input [31:0] digits,
     input [7:0] blank,
-    input [6:0] cathode,
+    output [6:0] cathode,
     output reg [7:0] anode
     );
     wire fsm_clock;
@@ -47,7 +47,7 @@ module display_driver(
         nibble = 4'b0;
     end
     
-    always @(posedge clock or posedge rst) begin
+    always @(posedge fsm_clock or posedge rst) begin
         if (rst) begin
             state <= 3'b0;
             anode <= 8'b11111111;
