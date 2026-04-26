@@ -38,11 +38,11 @@ module mole(
             sw_prev <= sw_sync1;
         end
     end
-    wire sw_rising = sw_sync1 & ~sw_prev;
+    wire sw_change = sw_sync1 ^ sw_prev;
     
     reg active; 
-    reg [25:0] timer;
-    localparam [25:0] WINDOW = 26'd49_999_999; // 1/2 second
+    reg [26:0] timer;
+    localparam [26:0] WINDOW = 27'd99_999_999; // 1 second
     
     always @(posedge clock or posedge rst) begin
         if (rst) begin
@@ -65,7 +65,7 @@ module mole(
                 end
             end else begin
                 // active
-                if (sw_rising && !others_active) begin
+                if (sw_change && !others_active) begin
                     hit <= 1'b1;
                     active <= 1'b0;
                     led <= 1'b0;

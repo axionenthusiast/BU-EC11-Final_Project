@@ -22,7 +22,7 @@
 
 module top(
     input clock,
-    input rst,
+    input cpu_resetn,
     input [15:0] switch,
     
     output [15:0] led,
@@ -33,30 +33,36 @@ module top(
     output VGA_HS, VGA_VS
     );
     
+    wire rst = ~cpu_resetn;
     wire [15:0] rng_out;    
     reg [15:0] seed = 16'd56394;
     reg load = 1'b1;
-    reg load_cleared = 1'b0;
+    reg [27:0] startup_counter = 0;
+    reg ready = 1'b0;
     
     always @(posedge clock) begin
-        if (!load_cleared) begin
-            load <= 1'b0;
-            load_cleared <= 1'b1;
-        end
-    end
+        load <= 1'b0;
+        if (!ready) begin
+            if (startup_counter == 28'd299_999_999)
+                ready <= 1'b1;
+            else
+                startup_counter <= startup_counter + 1;
+        end 
+    end 
    
     
     PRNG rng(.clk(clock), .rst(rst), .load(load), .seed(seed), .out(rng_out));    
     
     wire game_over;
+    wire game_rst = rst | ~ready;
     wire [11:0] timer_bcd, score_bcd;
-    game_timer gt(.clock(clock), .rst(rst), .game_over(game_over), .bcd(timer_bcd));
+    game_timer gt(.clock(clock), .rst(game_rst), .game_over(game_over), .bcd(timer_bcd));
     
     wire increment;
     score_counter sc(.clock(clock), .rst(rst), .increment(increment), .game_over(game_over), .bcd(score_bcd));
     
     wire [15:0] spawn_bus;
-    spawner sp(.clock(clock), .rst(rst), .rng(rng_out), .game_over(game_over), .spawn(spawn_bus));
+    spawner sp(.clock(clock), .rst(game_rst), .rng(rng_out), .game_over(game_over), .spawn(spawn_bus));
     
     wire [15:0] hits;
     //wire multiple_switches = (switch & (switch-16'b1)) != 16'b0;
